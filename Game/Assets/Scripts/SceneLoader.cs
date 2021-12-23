@@ -15,8 +15,10 @@ public class SceneLoader : MonoBehaviour
         switch (dropdownOption)
         {
             case 0:
-                SceneManager.LoadScene("Statistics"); break;
+                SceneManager.LoadScene("Options"); break;
             case 1:
+                SceneManager.LoadScene("Statistics"); break;
+            case 2:
                 SceneManager.LoadScene("About"); break;
             default:
                 SceneManager.LoadScene("Game"); break;

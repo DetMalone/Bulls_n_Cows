@@ -21,7 +21,9 @@ public class GameScript : MonoBehaviour
 
     private Color _digitRed = new Color(240 / 255f, 190 / 255f, 190 / 255f);
     private Color _digitGreen = new Color(190 / 255f, 230 / 255f, 190 / 255f);
-    private Color _digitGrey = new Color(250 / 255f, 250 / 255f, 240 / 255f);
+    private Color _digitGrey = new Color(200 / 255f, 200 / 255f, 200 / 255f);
+    private List<Color> _colorOrderList;
+    private Color _digitWhite = new Color(250 / 255f, 250 / 255f, 240 / 255f);
     private List<GameObject> _digitButtons;
     public GameObject DigitButton;
 
@@ -34,8 +36,11 @@ public class GameScript : MonoBehaviour
     public void Start()
     {
         CheckVersion();
+        SetColorOrder();
+
         _digitButtons = new List<GameObject>();
         _graphicRows = new List<List<GameObject>>();
+
         RestartButtonOnClick();
     }
 
@@ -158,6 +163,16 @@ public class GameScript : MonoBehaviour
             SaveTag.DeleteAllTags();
         PlayerPrefs.SetString("version", versionText.text);
     }
+    private void SetColorOrder()
+    {
+        var colorOption = OptionsScript.GetOptionTag(OptionTag.Color).Split(',');
+        var _colorList = new List<(int, Color)>();
+        if (colorOption[0] != "-1") _colorList.Add((int.Parse(colorOption[0]), _digitGreen));
+        if (colorOption[1] != "-1") _colorList.Add((int.Parse(colorOption[1]), _digitRed));
+        if (colorOption[2] != "-1") _colorList.Add((int.Parse(colorOption[2]), _digitGrey));
+        _colorOrderList = new List<Color>();
+        _colorOrderList = _colorList.OrderBy(clr => clr.Item1).Select(clr => clr.Item2).ToList();
+    }
 
     public void RestartButtonOnClick()
     {
@@ -199,10 +214,36 @@ public class GameScript : MonoBehaviour
         var BotCowsText = _graphicRows.Last().Find(element => new Regex(@"BotCowsText").IsMatch(element.name)).GetComponent<Text>();
         BotCowsText.text = ((int.Parse(BotCowsText.text) + 1) % 5).ToString();
     }
+
     public void DigitButtonOnClick(GameObject button)
     {
-        var buttonColor = button.GetComponent<Graphic>().color;
-        button.GetComponent<Graphic>().color = buttonColor == _digitGrey ? _digitRed : buttonColor == _digitRed ? _digitGreen : _digitGrey;
+        if (_colorOrderList.Count > 0)
+        {
+            var buttonColor = button.GetComponent<Graphic>().color;
+            if (buttonColor == _digitWhite)
+            {
+                button.GetComponent<Graphic>().color = _colorOrderList[0];
+            }
+            else
+            {
+                for (int i = 0; i < _colorOrderList.Count; i++)
+                {
+                    if (buttonColor == _colorOrderList[i])
+                    {
+                        if (i + 1 < _colorOrderList.Count)
+                        {
+                            button.GetComponent<Graphic>().color = _colorOrderList[i + 1];
+                            break;
+                        }
+                        else
+                        {
+                            button.GetComponent<Graphic>().color = _digitWhite;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     public void RandomButtonOnClick()
