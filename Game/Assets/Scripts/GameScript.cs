@@ -15,9 +15,14 @@ public class GameScript : MonoBehaviour
 
     public GameObject VersionNumberText;
 
+    public GameObject WinChanceText;
+
     private Vector3 _graphicRowShift = new Vector3(0, -140, 0);
     private List<List<GameObject>> _graphicRows;
     public List<GameObject> GraphicRow;
+    public GameObject PlayerAlternativeInput;
+
+    public GameObject BotGuessInput;
 
     private Color _digitRed = new Color(240 / 255f, 190 / 255f, 190 / 255f);
     private Color _digitGreen = new Color(190 / 255f, 230 / 255f, 190 / 255f);
@@ -27,8 +32,6 @@ public class GameScript : MonoBehaviour
     private List<GameObject> _digitButtons;
     public GameObject DigitButton;
 
-    public GameObject BotGuessInput;
-
     public GameObject StartGamePanel;
     public GameObject GameLogPanel;
     public GameObject EndGamePanel;
@@ -36,7 +39,6 @@ public class GameScript : MonoBehaviour
     public void Start()
     {
         CheckVersion();
-        SetColorOrder();
 
         _digitButtons = new List<GameObject>();
         _graphicRows = new List<List<GameObject>>();
@@ -51,9 +53,14 @@ public class GameScript : MonoBehaviour
             var playerSupposedNumber = _graphicRows.Last().Find(element => new Regex("PlayerInput").IsMatch(element.name)).GetComponent<InputField>().text;
             var botBulls = _graphicRows.Last().Find(element => new Regex("BotBulls").IsMatch(element.name)).GetComponent<Text>().text;
             var botCows = _graphicRows.Last().Find(element => new Regex("BotCows").IsMatch(element.name)).GetComponent<Text>().text;
+
             _game.Move(playerSupposedNumber, byte.Parse(botBulls), byte.Parse(botCows));
             SetInteractableTurnGraphic(false);
-            AddTurnGraphic();
+
+            if (!_game.IsEnded)
+            {
+                AddTurnGraphic();
+            }
         }
         catch (Exception ex)
         {
@@ -83,18 +90,21 @@ public class GameScript : MonoBehaviour
     }
     private void AddTurnGraphic()
     {
+        WinChanceText.GetComponent<Text>().text = $"Win {Math.Round(_game.WinChance * 100d, 2)}%";
+
         List<GameObject> graphicElements = GraphicRow.Select(element => Instantiate(element, GameLogPanel.transform)).ToList();
         graphicElements.ForEach(element => element.transform.localPosition += _graphicRowShift * _game.TurnCount);
         graphicElements.Find(element => new Regex("TurnNumber").IsMatch(element.name)).GetComponent<Text>().text = (_game.TurnCount + 1).ToString();
         graphicElements.Find(element => new Regex("BullsPlus").IsMatch(element.name)).GetComponent<Button>().onClick.AddListener(BullsPlusButtonOnClick);
         graphicElements.Find(element => new Regex("CowsPlus").IsMatch(element.name)).GetComponent<Button>().onClick.AddListener(CowsPlusButtonOnClick);
         _graphicRows.Add(graphicElements);
+
         try
         {
             _game.Hint();
             if (BotGuessInput.activeSelf == true)
             {
-                _graphicRows.Last().FindAll(element => new Regex("Plus").IsMatch(element.name)).ForEach(element => element.SetActive(false));
+                _graphicRows.Last().FindAll(element => new Regex("Plus").IsMatch(element.name)).ForEach(element => element.GetComponent<Button>().interactable = false);
                 var botGuessedNumber = new GameNumber(BotGuessInput.GetComponent<InputField>().text);
                 var botSupposedNumber = new GameNumber(_graphicRows.Last().Find(element => new Regex("BotInput").IsMatch(element.name)).GetComponent<InputField>().text);
                 (byte bulls, byte cows) botAnswer = botGuessedNumber.Compare(botSupposedNumber);
@@ -125,7 +135,7 @@ public class GameScript : MonoBehaviour
     private void SetGameButtonInteractable(bool isInteractable)
     {
         Canvas.GetComponentsInChildren<Button>()
-            .Where(button => !new Regex("Menu|End|Guess|Random|Cancel").IsMatch(button.name))
+            .Where(button => !new Regex("Menu|End|Guess|Random|Cancel|Close").IsMatch(button.name))
             .ToList()
             .ForEach(button => button.interactable = isInteractable);
     }
@@ -154,6 +164,11 @@ public class GameScript : MonoBehaviour
                 PlayerPrefs.SetFloat(SaveTag.GetTag(StatisticsFieldName.DrawAvgScore), (oldScore * oldCount + score) / ++oldCount);
                 break;
         }    
+    }
+    public void LoadGameOptions()
+    {
+        SetColorOrder();
+        PlayerAlternativeInput.SetActive(OptionsScript.GetOptionTag(OptionTag.BottomInput) == "True");
     }
     private void CheckVersion()
     {
@@ -195,6 +210,7 @@ public class GameScript : MonoBehaviour
     public void GoButtonOnClick()
     {
         Move();
+        PlayerAlternativeInput.GetComponent<InputField>().text = "";
     }
     public void EndRestartButtonOnClick()
     {
@@ -246,28 +262,55 @@ public class GameScript : MonoBehaviour
         }
     }
 
+    public void PlayerAlternativeInputAwake()
+    {
+        PlayerAlternativeInput.GetComponent<InputField>().onValueChanged.AddListener(text => PlayerAlternativeInputOnValueChanged(text));
+    }
+    public void PlayerAlternativeInputOnValueChanged(string text)
+    {
+        var lastPlayerInput = _graphicRows.Last().Find(element => new Regex("PlayerInput").IsMatch(element.name));
+        if (lastPlayerInput.GetComponent<InputField>().interactable)
+        {
+            lastPlayerInput.GetComponent<InputField>().text = text;
+        }
+    }
+
     public void RandomButtonOnClick()
     {
         StartGamePanel.GetComponentInChildren<InputField>().text = new GameNumber().ToString();
     }
     public void GuessButtonOnClick()
     {
+        ClearGameState();
         if (new GameNumber(StartGamePanel.GetComponentInChildren<InputField>().text).Valid)
         {
             BotGuessInput.GetComponent<InputField>().text = StartGamePanel.GetComponentInChildren<InputField>().text;
             BotGuessInput.SetActive(true);
+            StartGameState();
         }
         else
         {
             ErrorMessager.Message("This number is invalid. Try again.");
+            RestartButtonOnClick();
         }
-        CancelButtonOnClick();
     }
     public void CancelButtonOnClick()
     {
+        ClearGameState();
+        StartGameState();
+    }
+
+    private void ClearGameState()
+    {
         StartGamePanel.SetActive(false);
+        BotGuessInput.SetActive(false);
         SetGameButtonInteractable(true);
         Clear();
+    }
+    private void StartGameState()
+    {
+        PlayerAlternativeInputAwake();
+        LoadGameOptions();
         AddTurnGraphic();
         AddDigitButtonsGraphic();
     }

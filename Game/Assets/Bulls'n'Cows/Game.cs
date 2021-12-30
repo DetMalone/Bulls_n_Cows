@@ -10,8 +10,11 @@ public class Game : ICloneable
     private Game _reserveCopy;
     public byte TurnCount => (byte)_turns.Count();
     private List<(GameAnswer player, GameAnswer bot)> _turns;
-    private (bool player, bool bot) _isWin { set => Ended(value); }
+    public bool IsEnded { get; private set; }
 
+    public double WinChance => _possibleBotNumbers.Count == 1 ? 0d : (double)_possibleBotNumbers.Count / (_possibleBotNumbers.Count + _possiblePlayerNumbers.Count);
+
+    private List<GameNumber> _possiblePlayerNumbers;
     private List<GameNumber> _possibleBotNumbers;
     private List<byte> _notCheckedDigits;
 
@@ -26,6 +29,7 @@ public class Game : ICloneable
             .Select(number => new GameNumber(number.ToString("D4")))
             .Where(number => number.Valid)
             .ToList();
+        _possiblePlayerNumbers = _possibleBotNumbers.ToList();
         _turns = new List<(GameAnswer player, GameAnswer bot)>();
     }
 
@@ -62,10 +66,15 @@ public class Game : ICloneable
             Answered((_turns.Last().player.Bulls, _turns.Last().player.Cows));
 
             _possibleBotNumbers.RemoveAll(number => number.Compare(_turns.Last().bot.Number) != (botBulls, botCows));
+            _possiblePlayerNumbers.RemoveAll(number => number.Compare(_turns.Last().player.Number) != (_turns.Last().player.Bulls, _turns.Last().player.Cows));
             _notCheckedDigits.RemoveAll(digit => _turns.Last().bot.Number.Contains(digit));
 
             if (_turns.Last().player.Bulls == 4) isWin.player = true;
-            if (isWin != default) _isWin = isWin;
+            if (isWin != default)
+            {
+                IsEnded = true;
+                Ended(isWin);
+            }
         }
         else
         {
