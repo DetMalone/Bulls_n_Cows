@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 public class GameScript : MonoBehaviour
 {
@@ -17,12 +18,23 @@ public class GameScript : MonoBehaviour
 
     public GameObject WinChanceText;
 
-    private Vector3 _graphicRowShift = new Vector3(0, -140, 0);
+    private Vector3 _graphicRowShift = new Vector3(0, -120, 0);
     private List<List<GameObject>> _graphicRows;
     public List<GameObject> GraphicRow;
     public GameObject PlayerAlternativeInput;
 
     public GameObject BotGuessInput;
+
+    private Vector3 _backPanelWidth = new Vector3(40, 0, 0);
+    private Color _backRed = new Color(255 / 255f, 150 / 255f, 150 / 255f);
+    private Color _backGreen = new Color(170 / 255f, 255 / 255f, 170 / 255f);
+    private Color _backGrey = new Color(180 / 255f, 180 / 255f, 180 / 255f);
+    private List<Color> _backColorOrderList;
+    private Color _backHide = new Color();
+    private bool _backOption;
+    private Color[] _backState;
+    private List<List<GameObject>> _digitBackPanels;
+    public GameObject DigitBackPanel;
 
     private Color _digitRed = new Color(240 / 255f, 190 / 255f, 190 / 255f);
     private Color _digitGreen = new Color(190 / 255f, 230 / 255f, 190 / 255f);
@@ -40,6 +52,8 @@ public class GameScript : MonoBehaviour
     {
         CheckVersion();
 
+        _backState = new Color[10];
+        _digitBackPanels = new List<List<GameObject>>();
         _digitButtons = new List<GameObject>();
         _graphicRows = new List<List<GameObject>>();
 
@@ -86,11 +100,23 @@ public class GameScript : MonoBehaviour
         _digitButtons = Enumerable.Range(0, 10).Select(digit => Instantiate(DigitButton, GameLogPanel.transform)).ToList();
         Enumerable.Range(0, 10).ToList().ForEach(digit => _digitButtons[digit].GetComponentInChildren<Text>().text = digit.ToString());
         _digitButtons.ForEach(digit => digit.transform.localPosition += new Vector3(digit.GetComponent<RectTransform>().rect.width, 0, 0) * int.Parse(digit.GetComponentInChildren<Text>().text));
-        _digitButtons.ForEach(digit => digit.GetComponent<Button>().onClick.AddListener(delegate { DigitButtonOnClick(digit); }));
+        _digitButtons.ForEach(digit => digit.GetComponent<Button>().onClick.AddListener(() => DigitButtonOnClick(digit)));
+
+        Enumerable.Range(0, 10).ToList().ForEach(index => _backState[index] = _backHide);
     }
     private void AddTurnGraphic()
     {
         WinChanceText.GetComponent<Text>().text = $"Win {Math.Round(_game.WinChance * 100d, 2)}%";
+
+        if (_digitBackPanels.Count != 0 ) FillTurnBacks(_digitBackPanels.Count - 1);
+        var backPanels = Enumerable.Range(0, 4).Select(index => Instantiate(DigitBackPanel, GameLogPanel.transform)).ToList();
+        for (int i = 0; i < backPanels.Count; i++)
+        {
+            var backTransform = backPanels[i].transform;
+            backTransform.localPosition += _graphicRowShift * _game.TurnCount;
+            backTransform.localPosition += i * _backPanelWidth;
+        }
+        _digitBackPanels.Add(backPanels);
 
         List<GameObject> graphicElements = GraphicRow.Select(element => Instantiate(element, GameLogPanel.transform)).ToList();
         graphicElements.ForEach(element => element.transform.localPosition += _graphicRowShift * _game.TurnCount);
@@ -120,6 +146,8 @@ public class GameScript : MonoBehaviour
     }
     private void ClearTurnGraphic()
     {
+        _digitBackPanels.Last().ForEach(back => Destroy(back));
+        _digitBackPanels.Remove(_digitBackPanels.Last());
         _graphicRows.Last().ForEach(element => Destroy(element));
         _graphicRows.Remove(_graphicRows.Last());
     }
@@ -165,10 +193,11 @@ public class GameScript : MonoBehaviour
                 break;
         }    
     }
-    public void LoadGameOptions()
+    private void LoadGameOptions()
     {
         SetColorOrder();
         PlayerAlternativeInput.SetActive(OptionsScript.GetOptionTag(OptionTag.BottomInput) == "True");
+        _backOption = OptionsScript.GetOptionTag(OptionTag.BackColor) == "True";
     }
     private void CheckVersion()
     {
@@ -181,12 +210,39 @@ public class GameScript : MonoBehaviour
     private void SetColorOrder()
     {
         var colorOption = OptionsScript.GetOptionTag(OptionTag.Color).Split(',');
-        var _colorList = new List<(int, Color)>();
-        if (colorOption[0] != "-1") _colorList.Add((int.Parse(colorOption[0]), _digitGreen));
-        if (colorOption[1] != "-1") _colorList.Add((int.Parse(colorOption[1]), _digitRed));
-        if (colorOption[2] != "-1") _colorList.Add((int.Parse(colorOption[2]), _digitGrey));
+        var _colorList = new List<(int, Color, Color)>();
+
+        if (colorOption[0] != "-1") _colorList.Add((int.Parse(colorOption[0]), _digitGreen, _backGreen));
+        if (colorOption[1] != "-1") _colorList.Add((int.Parse(colorOption[1]), _digitRed, _backRed));
+        if (colorOption[2] != "-1") _colorList.Add((int.Parse(colorOption[2]), _digitGrey, _backGrey));
+
         _colorOrderList = new List<Color>();
         _colorOrderList = _colorList.OrderBy(clr => clr.Item1).Select(clr => clr.Item2).ToList();
+
+        _backColorOrderList = new List<Color>();
+        _backColorOrderList = _colorList.OrderBy(clr => clr.Item1).Select(clr => clr.Item3).ToList();
+    }
+    private void FillTurnBacks(int turn)
+    {
+        if (!_backOption) return;
+        var turnBacks = _digitBackPanels[turn];
+        var digits = _graphicRows[turn]
+                        .Find(element => new Regex("PlayerInput").IsMatch(element.name))
+                        .GetComponent<InputField>().text
+                                                    .Select(digit => int.Parse(digit.ToString()))
+                                                    .ToList();
+        for (int i = 0; i < digits.Count; i++)
+        {
+            var backImage = turnBacks[i].GetComponent<Image>();
+            backImage.color = _backState[digits[i]];
+        }
+    }
+    private void BackStateChanged()
+    {
+        for (int i = 0; i < _digitBackPanels.Count - 1; i++)
+        {
+            FillTurnBacks(i);
+        }
     }
 
     public void RestartButtonOnClick()
@@ -233,12 +289,16 @@ public class GameScript : MonoBehaviour
 
     public void DigitButtonOnClick(GameObject button)
     {
+        int buttonIndex;
+        buttonIndex = int.TryParse(button.GetComponentInChildren<Text>().text, out buttonIndex) ? buttonIndex : 0;
         if (_colorOrderList.Count > 0)
         {
             var buttonColor = button.GetComponent<Graphic>().color;
             if (buttonColor == _digitWhite)
             {
                 button.GetComponent<Graphic>().color = _colorOrderList[0];
+                _backState[buttonIndex] = _backColorOrderList[0];
+                BackStateChanged();
             }
             else
             {
@@ -249,11 +309,15 @@ public class GameScript : MonoBehaviour
                         if (i + 1 < _colorOrderList.Count)
                         {
                             button.GetComponent<Graphic>().color = _colorOrderList[i + 1];
+                            _backState[buttonIndex] = _backColorOrderList[i + 1];
+                            BackStateChanged();
                             break;
                         }
                         else
                         {
                             button.GetComponent<Graphic>().color = _digitWhite;
+                            _backState[buttonIndex] = _backHide;
+                            BackStateChanged();
                             break;
                         }
                     }

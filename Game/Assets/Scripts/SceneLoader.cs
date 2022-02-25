@@ -5,6 +5,7 @@ using UnityEngine.SceneManagement;
 
 public class SceneLoader : MonoBehaviour
 {
+    private readonly string[] sceneNames = new string[4]{ "Options", "Statistics", "About", "Game" };
     public void LoadScene(string sceneName)
     {
         SceneManager.LoadScene(sceneName);
@@ -12,16 +13,7 @@ public class SceneLoader : MonoBehaviour
 
     public void DropdownLoadScene(int dropdownOption)
     {
-        switch (dropdownOption)
-        {
-            case 0:
-                SceneManager.LoadScene("Options"); break;
-            case 1:
-                SceneManager.LoadScene("Statistics"); break;
-            case 2:
-                SceneManager.LoadScene("About"); break;
-            default:
-                SceneManager.LoadScene("Game"); break;
-        }
+        var sceneName = sceneNames[dropdownOption];
+        SceneManager.LoadScene(sceneName);
     }
 }

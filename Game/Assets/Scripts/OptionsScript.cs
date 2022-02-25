@@ -17,6 +17,7 @@ public class OptionsScript : MonoBehaviour
 
     public GameObject[] ColorButtons;
     public GameObject InputOptionCheckbox;
+    public GameObject BackOptionCheckbox;
 
     public void Start()
     {
@@ -29,6 +30,9 @@ public class OptionsScript : MonoBehaviour
 
         InitializeInputOption();
         InputOptionCheckbox.GetComponent<Toggle>().onValueChanged.AddListener(value => SaveInputOption(value));
+
+        InitializeBackOption();
+        BackOptionCheckbox.GetComponent<Toggle>().onValueChanged.AddListener(value => SaveBackOption(value));
     }
 
     private void ClickButton(int index)
@@ -103,6 +107,11 @@ public class OptionsScript : MonoBehaviour
     public bool LoadInputOption() => GetOptionTag(OptionTag.BottomInput) == "False" ? false : true;
     public void SaveInputOption(bool value) => SetOptionTag(OptionTag.BottomInput, value ? "True" : "False");
 
+    private void InitializeBackOption() => BackOptionCheckbox.GetComponent<Toggle>().isOn = LoadBackOption();
+
+    public bool LoadBackOption() => GetOptionTag(OptionTag.BackColor) == "False" ? false : true;
+    public void SaveBackOption(bool value) => SetOptionTag(OptionTag.BackColor, value ? "True" : "False");
+
     public static string GetOptionTag(OptionTag optionTag)
     {
         var tag = typeof(OptionTag).GetEnumName(optionTag);
@@ -116,12 +125,31 @@ public class OptionsScript : MonoBehaviour
         var tag = typeof(OptionTag).GetEnumName(optionTag);
         PlayerPrefs.SetString(tag, value);
     }
+    private void DeleteOptionTag(OptionTag optionTag)
+    {
+        var tag = typeof(OptionTag).GetEnumName(optionTag);
+        PlayerPrefs.DeleteKey(tag);
+    }
+    private void DeleteAllOption()
+    {
+        foreach (OptionTag e in Enum.GetValues(typeof(OptionTag)))
+        {
+            DeleteOptionTag(e);
+        }
+    }
+
+    public void ResetButtonOnClick()
+    {
+        DeleteAllOption();
+        Start();
+    }
 }
 
 public enum OptionTag
 {
     Color,
-    BottomInput
+    BottomInput,
+    BackColor
 }
 
 public enum ColorName
