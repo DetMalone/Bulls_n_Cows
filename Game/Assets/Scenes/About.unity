@@ -634,9 +634,10 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: "\tDesign: \nDanila \"detMalone\" Druzhinin\n\tDevelopment: \nDanila \"detMalone\"
-    Druzhinin\n\tTesting: \nNikita \"niceandfun\" Druzhinin\nDanila \"detMalone\"
-    Druzhinin\n\tSound & Art:\nNobody\n\tProduction:\nNobody"
+  m_Text: "\tGame Design:\nDanila \"detMalone\" Druzhinin\nNikita \"niceandfun\"
+    Druzhinin\n\tTech Design: \nDanila \"detMalone\" Druzhinin\n\tDevelopment: \nDanila
+    \"detMalone\" Druzhinin\n\tTesting: \nNikita \"niceandfun\" Druzhinin\nDanila
+    \"detMalone\" Druzhinin\n\tSound & Art:\nNobody\n\tProduction:\nNobody"
 --- !u!222 &1643142375
 CanvasRenderer:
   m_ObjectHideFlags: 0
